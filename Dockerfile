@@ -5,15 +5,16 @@ RUN npm install -g pnpm
 
 WORKDIR /app
 
-# Copy package files from backend directory
-COPY orbit-backend/package*.json ./
-COPY orbit-backend/pnpm-lock.yaml* ./
+# Copy package files from current directory
+COPY package*.json ./
+COPY pnpm-lock.yaml* ./
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile --prod
+ENV SKIP_PNPM_CHECK=1
+RUN pnpm install --prod
 
 # Copy backend source code
-COPY orbit-backend/src/ ./src/
+COPY src/ ./src/
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \

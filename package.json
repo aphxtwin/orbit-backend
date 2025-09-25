@@ -1,5 +1,5 @@
 {
-  "name": "messaging-hub-backend",
+  "name": "orbit-backend",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -21,7 +21,7 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "messaging-hub-backend": "link:",
+    "orbit-backend": "link:",
     "mongoose": "^8.14.1",
     "redis": "^5.8.0",
     "socket.io": "^4.8.1",
