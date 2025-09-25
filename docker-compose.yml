@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   nginx:
     image: nginx:stable
-    container_name: messaging-hub-proxy
+    container_name: orbit-backend-proxy
     ports:
       - "80:80"
       - "443:443"
@@ -15,11 +13,11 @@ services:
       - backend
     restart: unless-stopped
     networks:
-      - messaging-hub-network
+      - orbit-backend-network
 
   certbot:
     image: certbot/dns-cloudflare
-    container_name: messaging-hub-certbot
+    container_name: orbit-backend-certbot
     volumes:
       - letsencrypt:/etc/letsencrypt
       - ./secrets:/secrets
@@ -39,11 +37,11 @@ services:
         -d $${DOMAIN} -d *.$${DOMAIN}
       "
     networks:
-      - messaging-hub-network
+      - orbit-backend-network
 
   backend:
     build: .
-    container_name: messaging-hub-backend
+    container_name: orbit-backend-backend
     expose:
       - "8080"
     env_file:
@@ -59,7 +57,7 @@ services:
     volumes:
       - ./logs/backend:/app/logs
     networks:
-      - messaging-hub-network
+      - orbit-backend-network
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s
@@ -69,7 +67,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: messaging-hub-redis
+    container_name: orbit-backend-redis
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
     volumes:
       - redis_data:/data
@@ -77,7 +75,7 @@ services:
       - "6379:6379"
     restart: unless-stopped
     networks:
-      - messaging-hub-network
+      - orbit-backend-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -91,5 +89,5 @@ volumes:
     driver: local
 
 networks:
-  messaging-hub-network:
+  orbit-backend-network:
     driver: bridge
