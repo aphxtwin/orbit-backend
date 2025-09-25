@@ -4,7 +4,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const http = require('http');           // ⬅️ Servidor HTTP nativo
 const { Server } = require('socket.io'); // ⬅️ socket.io
-const redis = require('./config/redis');
+// Redis removed - using in-memory session storage
 
 
 

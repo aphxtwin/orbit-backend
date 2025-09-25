@@ -1,11 +1,11 @@
-// ✅ Crear: orbit/messaging-hub-backend/src/service/sessionService.js
-const redis = require('../config/redis');
+// ✅ In-memory session service (Redis removed)
 const { v4: uuidv4 } = require('uuid');
 
 class SessionService {
   constructor() {
-    this.SESSION_PREFIX = 'session:';
-    this.SESSION_DURATION = 24 * 60 * 60; // 24 horas en segundos
+    this.sessions = new Map(); // In-memory storage
+    this.SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    this.cleanupInterval = setInterval(() => this.cleanup(), 60 * 60 * 1000); // Cleanup every hour
   }
 
   async createSession(appUser, odooSessionData = null) {
@@ -17,55 +17,55 @@ class SessionService {
       name: appUser.name,
       role: appUser.role,
       odooUserId: appUser.odooUserId,
-      odooSessionData, // Datos de sesión de Odoo para reutilizar
+      odooSessionData,
       createdAt: Date.now(),
-      expiresAt: Date.now() + (this.SESSION_DURATION * 1000),
+      expiresAt: Date.now() + this.SESSION_DURATION,
       lastActivity: Date.now()
     };
 
-    await redis.setEx(
-      `${this.SESSION_PREFIX}${sessionId}`,
-      this.SESSION_DURATION,
-      JSON.stringify(sessionData)
-    );
-
+    this.sessions.set(sessionId, sessionData);
     return sessionId;
   }
 
   async getSession(sessionId) {
-    const sessionData = await redis.get(`${this.SESSION_PREFIX}${sessionId}`);
-    return sessionData ? JSON.parse(sessionData) : null;
+    const session = this.sessions.get(sessionId);
+    if (session && session.expiresAt > Date.now()) {
+      return session;
+    } else if (session) {
+      this.sessions.delete(sessionId); // Clean up expired session
+    }
+    return null;
   }
 
   async updateLastActivity(sessionId) {
-    const session = await this.getSession(sessionId);
+    const session = this.sessions.get(sessionId);
     if (session) {
       session.lastActivity = Date.now();
-      await redis.setEx(
-        `${this.SESSION_PREFIX}${sessionId}`,
-        this.SESSION_DURATION,
-        JSON.stringify(session)
-      );
+      session.expiresAt = Date.now() + this.SESSION_DURATION;
+      this.sessions.set(sessionId, session);
     }
   }
 
   async destroySession(sessionId) {
-    await redis.del([`${this.SESSION_PREFIX}${sessionId}`]);
+    this.sessions.delete(sessionId);
   }
 
   async destroyAllUserSessions(appUserId) {
-    const pattern = `${this.SESSION_PREFIX}*`;
-    const keys = await redis.keys(pattern);
-    
-    for (const key of keys) {
-      const session = await redis.get(key);
-      if (session) {
-        const sessionData = JSON.parse(session);
-        if (sessionData.appUserId === appUserId.toString()) {
-          await redis.del([key]);
-        }
+    for (const [sessionId, session] of this.sessions.entries()) {
+      if (session.appUserId === appUserId.toString()) {
+        this.sessions.delete(sessionId);
       }
     }
+  }
+
+  cleanup() {
+    const now = Date.now();
+    for (const [sessionId, session] of this.sessions.entries()) {
+      if (session.expiresAt <= now) {
+        this.sessions.delete(sessionId);
+      }
+    }
+    console.log(`✅ Session cleanup completed. Active sessions: ${this.sessions.size}`);
   }
 }
 
