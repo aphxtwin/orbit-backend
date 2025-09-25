@@ -25,10 +25,18 @@ services:
       - nginx
     entrypoint: >
       sh -c "
+      echo 'Creating credentials file...' &&
       echo 'dns_cloudflare_api_token = $${CLOUDFLARE_API_TOKEN}' > /secrets/cloudflare.ini &&
       chmod 600 /secrets/cloudflare.ini &&
-      certbot certonly --dns-cloudflare --dns-cloudflare-credentials /secrets/cloudflare.ini --dns-cloudflare-propagation-seconds 30 --email $${LETSENCRYPT_EMAIL} --agree-tos --no-eff-email -d $${DOMAIN} -d *.$${DOMAIN} &&
-      echo 'Certificates generated successfully. You can now switch nginx to use the full SSL config and restart the container.'
+      echo 'Testing API token...' &&
+      if [ -z '$${CLOUDFLARE_API_TOKEN}' ]; then
+        echo 'ERROR: CLOUDFLARE_API_TOKEN is empty. Check your .env file.' && sleep 30;
+      else
+        echo 'API token found, generating certificates...' &&
+        certbot certonly --dns-cloudflare --dns-cloudflare-credentials /secrets/cloudflare.ini --dns-cloudflare-propagation-seconds 30 --email $${LETSENCRYPT_EMAIL} --agree-tos --no-eff-email -d $${DOMAIN} -d *.$${DOMAIN} &&
+        echo 'Certificates generated successfully. You can now switch nginx to use the full SSL config and restart the container.' ||
+        (echo 'Certificate generation failed. Check logs above.' && sleep 30);
+      fi
       "
     networks:
       - orbit-backend-network
