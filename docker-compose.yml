@@ -26,8 +26,8 @@ services:
     entrypoint: >
       sh -c "
       echo 'Creating credentials file...' &&
-      echo 'dns_cloudflare_email = $${CLOUDFLARE_EMAIL}' > /secrets/cloudflare.ini &&
-      echo 'dns_cloudflare_api_key = $${CLOUDFLARE_API_KEY}' >> /secrets/cloudflare.ini &&
+      echo \"dns_cloudflare_email = $${CLOUDFLARE_EMAIL}\" > /secrets/cloudflare.ini &&
+      echo \"dns_cloudflare_api_key = $${CLOUDFLARE_API_KEY}\" >> /secrets/cloudflare.ini &&
       chmod 600 /secrets/cloudflare.ini &&
       echo 'Testing credentials...' &&
       if [ -z '$${CLOUDFLARE_EMAIL}' ] || [ -z '$${CLOUDFLARE_API_KEY}' ]; then
