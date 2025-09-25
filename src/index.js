@@ -28,16 +28,7 @@ const app = express();
 
 // Conectar a MongoDB
 connectDB();
-// Connect to Redis
-
-// Test Redis connection on startup
-redis.on('connect', () => {
-  console.log('✅ Redis connected successfully');
-});
-
-redis.on('error', (err) => {
-  console.error('❌ Redis connection error:', err);
-});
+// Redis removed - using in-memory session storage
 
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
