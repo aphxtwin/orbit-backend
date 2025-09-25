@@ -27,14 +27,7 @@ services:
       sh -c "
       echo 'dns_cloudflare_api_token = $${CLOUDFLARE_API_TOKEN}' > /secrets/cloudflare.ini &&
       chmod 600 /secrets/cloudflare.ini &&
-      certbot certonly
-        --dns-cloudflare
-        --dns-cloudflare-credentials /secrets/cloudflare.ini
-        --dns-cloudflare-propagation-seconds 30
-        --email $${LETSENCRYPT_EMAIL}
-        --agree-tos
-        --no-eff-email
-        -d $${DOMAIN} -d *.$${DOMAIN}
+      certbot certonly --dns-cloudflare --dns-cloudflare-credentials /secrets/cloudflare.ini --dns-cloudflare-propagation-seconds 30 --email $${LETSENCRYPT_EMAIL} --agree-tos --no-eff-email -d $${DOMAIN} -d *.$${DOMAIN}
       "
     networks:
       - orbit-backend-network
