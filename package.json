@@ -1,0 +1,35 @@
+{
+  "name": "messaging-hub-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "preinstall": "node -e \"if (process.env.npm_execpath && process.env.npm_execpath.includes('npm') && !process.env.SKIP_PNPM_CHECK) { console.error('\\x1b[31m❌ Please use pnpm instead of npm!\\x1b[0m'); console.error('\\x1b[33m💡 Run: pnpm install\\x1b[0m'); console.error('\\x1b[33m💡 Or set SKIP_PNPM_CHECK=1 to bypass\\x1b[0m'); process.exit(1); }\"",
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "axios": "^1.9.0",
+    "body-parser": "^2.2.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "messaging-hub-backend": "link:",
+    "mongoose": "^8.14.1",
+    "redis": "^5.8.0",
+    "socket.io": "^4.8.1",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "dependency-cruiser": "^16.10.2",
+    "jest": "^30.0.5",
+    "nodemon": "^3.1.10"
+  }
+}

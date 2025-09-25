@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:stable
+    container_name: messaging-hub-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - letsencrypt:/etc/letsencrypt
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - messaging-hub-network
+
+  certbot:
+    image: certbot/dns-cloudflare
+    container_name: messaging-hub-certbot
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - ./secrets:/secrets
+    env_file:
+      - .env
+    entrypoint: >
+      sh -c "
+      echo 'dns_cloudflare_api_token = $${CLOUDFLARE_API_TOKEN}' > /secrets/cloudflare.ini &&
+      chmod 600 /secrets/cloudflare.ini &&
+      certbot certonly
+        --dns-cloudflare
+        --dns-cloudflare-credentials /secrets/cloudflare.ini
+        --dns-cloudflare-propagation-seconds 30
+        --email $${LETSENCRYPT_EMAIL}
+        --agree-tos
+        --no-eff-email
+        -d $${DOMAIN} -d *.$${DOMAIN}
+      "
+    networks:
+      - messaging-hub-network
+
+  backend:
+    build: .
+    container_name: messaging-hub-backend
+    expose:
+      - "8080"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    volumes:
+      - ./logs/backend:/app/logs
+    networks:
+      - messaging-hub-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    container_name: messaging-hub-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - messaging-hub-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  redis_data:
+    driver: local
+  letsencrypt:
+    driver: local
+
+networks:
+  messaging-hub-network:
+    driver: bridge
