@@ -6,14 +6,14 @@ RUN npm install -g pnpm
 WORKDIR /app
 
 # Copy package files from backend directory
-COPY messaging-hub-backend/package*.json ./
-COPY messaging-hub-backend/pnpm-lock.yaml* ./
+COPY orbit-backend/package*.json ./
+COPY orbit-backend/pnpm-lock.yaml* ./
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile --prod
 
 # Copy backend source code
-COPY messaging-hub-backend/src/ ./src/
+COPY orbit-backend/src/ ./src/
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
