@@ -38,7 +38,8 @@ app.use(cors({
   origin: [
     process.env.FRONT_URL || 'http://localhost:3000', 
     'http://localhost:3001', 
-    'http://localhost:8080', 
+    'http://localhost:8080',
+    'orbit-five-teal.vercel.app',
     'https://orbitg.bici-dev.com', 
     'https://orbit.bici-dev.com', 
     'https://apig.bici-dev.com',
