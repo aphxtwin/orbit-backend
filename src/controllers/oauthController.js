@@ -145,10 +145,6 @@ const oauthController = {
             'instagram_basic',
             'instagram_manage_messages',
             'pages_show_list',
-            'instagram_manage_comments',
-            'pages_read_engagement',
-            'pages_manage_metadata',
-            'business_management',
             'pages_messaging'  // Agregar este permiso
           ];
           authUrl = `https://www.facebook.com/v20.0/dialog/oauth?client_id=${FB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(instagramScopes.join(','))}&response_type=code&state=${encodeURIComponent(state)}`;
@@ -159,8 +155,6 @@ const oauthController = {
         case 'messenger':
           const messengerScopes = [
             'pages_show_list',
-            'pages_read_engagement',
-            'pages_manage_metadata',
             'pages_messaging'
           ];
           authUrl = `https://www.facebook.com/v20.0/dialog/oauth?client_id=${FB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(messengerScopes.join(','))}&response_type=code&state=${encodeURIComponent(state)}`;
@@ -170,8 +164,7 @@ const oauthController = {
           // ✅ NUEVO: WhatsApp no necesita waConfigId, se puede conectar directamente
           const whatsappScopes = [
             'whatsapp_business_management',
-            'whatsapp_business_messaging',
-            'business_management'
+            'whatsapp_business_messaging'
           ];
           authUrl = `https://www.facebook.com/v20.0/dialog/oauth?client_id=${FB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(whatsappScopes.join(','))}&response_type=code&state=${encodeURIComponent(state)}`;
           break;
