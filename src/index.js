@@ -40,11 +40,7 @@ app.use(cors({
     'http://localhost:3001', 
     'http://localhost:8080',
     'https://orbit-five-teal.vercel.app',
-    'https://orbitg.bici-dev.com', 
-    'https://orbit.bici-dev.com', 
-    'https://apig.bici-dev.com',
-    'https://apig.bici-dev.com', // Backend tunnel domain
-    'https://app.bici-dev.com', // Frontend tunnel domain
+    'https://*.bici-dev.com',
     // ✅ Agregar dominios de Cloudflare
     'https://*.trycloudflare.com',
     'https://*.ngrok.io',
