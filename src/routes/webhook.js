@@ -25,17 +25,14 @@ router.post('/', async (req, res) => {
   const payload = req.body;
   const io = req.app.get('io');
 
-  console.log('📩 RAW Webhook Payload:', JSON.stringify(payload, null, 2));
   
 
   
   try {
     if (payload.object === 'instagram') {
-      console.log('📱 Processing Instagram message...');
       
       // El ID que llega es del usuario que envía el mensaje, NO de tu cuenta
       const senderUserId = payload.entry[0].id;
-      console.log('👤 Sender User ID (client):', senderUserId);
       
       // Buscar cualquier registro de Instagram conectado (no por igUserId específico)
       const oauthRecord = await OAuth.findOne({ 
@@ -49,11 +46,6 @@ router.post('/', async (req, res) => {
         
         // Debug: buscar todos los registros de Instagram para ver qué hay
         const allInstagramRecords = await OAuth.find({ channel: 'instagram' });
-        console.log('🔍 All Instagram OAuth records:', allInstagramRecords.map(r => ({
-          tenant: r.tenant,
-          igUserId: r.igUserId,
-          status: r.status
-        })));
         
         return res.status(500).json({ error: 'No Instagram OAuth configuration found' });
       }
@@ -66,19 +58,12 @@ router.post('/', async (req, res) => {
       }
       
       // Debug: verificar el token
-      console.log('🔍 Access Token from DB:', accessToken.substring(0, 20) + '...');
-      console.log('🔍 Token length:', accessToken.length);
-      console.log('🔍 Token format valid:', accessToken.startsWith('EAA'));
       
       const tenantId = oauthRecord.tenant.toString();
-      console.log('✅ Using access token from database for tenant:', tenantId);
-      console.log('🏢 Your Instagram Business Account ID:', oauthRecord.igUserId);
-      console.log('👤 Message from client ID:', senderUserId);
       
       await handleInstagramMessage(payload, io, accessToken, tenantId);
     } 
     else if (payload.object === 'whatsapp_business_account') {
-      console.log('💬 Processing WhatsApp message...');
       
       // Get tenant from OAuth configuration for WhatsApp
       const oauthRecord = await OAuth.findOne({ 
@@ -95,7 +80,6 @@ router.post('/', async (req, res) => {
       await handleWhatsAppMessage(payload, io, tenantId);
     }
     else if (payload.object === 'page') {
-      console.log('💬 Processing Messenger message...');
       
       // Get tenant from OAuth configuration for Messenger
       const oauthRecord = await OAuth.findOne({ 
@@ -115,13 +99,10 @@ router.post('/', async (req, res) => {
       }
       
       const tenantId = oauthRecord.tenant.toString();
-      console.log('✅ Using access token from database for tenant:', tenantId);
-      console.log('🏢 Your Page ID:', oauthRecord.pageId);
       
       await handleMessengerMessage(payload, io, accessToken, tenantId);
     }
     else {
-      console.log('❓ Unknown webhook object:', payload.object);
     }
   } catch (error) {
     console.error('❌ Webhook processing error:', error.message);
@@ -235,7 +216,6 @@ router.post('/whatsapp-api-send', (req, res) => {
     }]
   };
 
-  console.log('🧪 MOCK MESSAGE RECEIVED:', JSON.stringify(mockPayload, null, 2));
 
   // 👉 También lo empujás a los clientes WebSocket
   req.app.get('io').emit('whatsapp:event', mockPayload);
@@ -264,7 +244,6 @@ router.post('/instagram-api-send', (req, res) => {
     }]
   };
 
-  console.log('🧪 MOCK INSTAGRAM MESSAGE RECEIVED:', JSON.stringify(mockPayload, null, 2));
 
   // Emitirlo a los clientes WebSocket igual que el real
   const formattedMessage = {
@@ -297,8 +276,6 @@ router.get('/debug-ids', async (req, res) => {
 // Test Meta Graph API connection and find correct phone numbers
 router.get('/test-meta-api', async (req, res) => {
   try {
-    console.log('🔍 Testing Meta Graph API connection...');
-    console.log('🔍 Trying to get app info first...');
     
     // Try to get app info to validate token
     const appResult = await axios.get(
@@ -310,7 +287,6 @@ router.get('/test-meta-api', async (req, res) => {
       }
     );
     
-    console.log('✅ App/User info:', appResult.data);
     
     let phoneInfo = null;
     let phoneError = null;
