@@ -392,18 +392,12 @@ const oauthController = {
             return res.redirect(redirectUrl);
           }
           
-          // For Instagram, return JSON (existing behavior)
-          return res.json({
-            success: true,
-            tenantId,
-            channel,
-            status: 'connected',
-            message: `${channel} connected successfully with webhook activated`,
-            pageId: selectedPage.id,
-            pageName: pageName,
-            igUserId: igUserId,
-            webhookActivated: true
-          });
+          // For Instagram, redirect to frontend after successful connection
+          const frontendUrl = process.env.FRONTEND_URL || 'https://orbitg.bici-dev.com';
+          const redirectUrl = `${frontendUrl}/canales`;
+          
+          console.log('✅ Instagram connected successfully, redirecting to:', redirectUrl);
+          return res.redirect(redirectUrl);
         } else {
           // Estado pendiente de selección manual
           await oauth.updateConnection({
@@ -446,15 +440,12 @@ const oauthController = {
             return res.redirect(redirectUrl);
           }
           
-          // For Instagram, return JSON (existing behavior)
-          return res.json({
-            success: true,
-            tenantId,
-            channel,
-            status: 'pending_page_selection',
-            pages,
-            message: 'Please select a page with Instagram Business account'
-          });
+          // For Instagram, redirect to frontend even if pending page selection
+          const frontendUrl = process.env.FRONTEND_URL || 'https://orbitg.bici-dev.com';
+          const redirectUrl = `${frontendUrl}/canales`;
+          
+          console.log('✅ Instagram connection pending page selection, redirecting to:', redirectUrl);
+          return res.redirect(redirectUrl);
         }
       }
 
