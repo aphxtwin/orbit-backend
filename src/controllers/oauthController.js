@@ -644,12 +644,54 @@ const oauthController = {
   async disconnect(req, res) {
     try {
       const { tenantId, channel } = req.params;
+      
+      console.log(`🔄 Disconnecting ${channel} for tenant ${tenantId}`);
+      
+      // Buscar la conexión principal
       const oauth = await OAuth.findOne({ tenant: tenantId, channel });
       if (!oauth) {
         return res.status(404).json({ error: 'OAuth connection not found' });
       }
+      
+      console.log(`✅ Found ${channel} connection, status: ${oauth.status}`);
+      
+      // Desconectar la conexión principal
       await oauth.disconnect();
-      res.json({ message: `${channel} disconnected successfully` });
+      console.log(`✅ ${channel} disconnected successfully`);
+      
+      // ✅ NUEVO: Si es Instagram, también desconectar Messenger
+      if (channel === 'instagram') {
+        console.log('�� Disconnecting dual Instagram + Messenger connection...');
+        
+        const messengerOAuth = await OAuth.findOne({ tenant: tenantId, channel: 'messenger' });
+        if (messengerOAuth) {
+          console.log(`✅ Found Messenger connection, status: ${messengerOAuth.status}`);
+          await messengerOAuth.disconnect();
+          console.log('✅ Messenger also disconnected');
+        } else {
+          console.log('⚠️ No Messenger connection found to disconnect');
+        }
+      }
+      
+      // ✅ NUEVO: Si es Messenger, también desconectar Instagram
+      if (channel === 'messenger') {
+        console.log('�� Disconnecting dual Messenger + Instagram connection...');
+        
+        const instagramOAuth = await OAuth.findOne({ tenant: tenantId, channel: 'instagram' });
+        if (instagramOAuth) {
+          console.log(`✅ Found Instagram connection, status: ${instagramOAuth.status}`);
+          await instagramOAuth.disconnect();
+          console.log('✅ Instagram also disconnected');
+        } else {
+          console.log('⚠️ No Instagram connection found to disconnect');
+        }
+      }
+      
+      res.json({ 
+        message: `${channel} disconnected successfully`,
+        dualDisconnect: channel === 'instagram' || channel === 'messenger'
+      });
+      
     } catch (error) {
       console.error('❌ OAuth Disconnect Error:', error);
       res.status(500).json({ error: 'Error disconnecting OAuth' });
