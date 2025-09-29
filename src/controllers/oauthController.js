@@ -145,7 +145,6 @@ const oauthController = {
             'instagram_basic',
             'instagram_manage_messages',
             'pages_show_list',
-            'instagram_manage_comments',
             'business_management',
             'pages_messaging'  // Agregar este permiso
           ];
@@ -157,8 +156,6 @@ const oauthController = {
         case 'messenger':
           const messengerScopes = [
             'pages_show_list',
-            'pages_read_engagement',
-            'pages_manage_metadata',
             'pages_messaging',
             'business_management'
           ];
