@@ -22,93 +22,162 @@ router.get('/', (req, res) => {
 
 // POST handler for both Instagram and WhatsApp webhooks
 router.post('/', async (req, res) => {
+  console.log('\n╔════════════════════════════════════════╗');
+  console.log('║     WEBHOOK POST REQUEST RECEIVED      ║');
+  console.log('╚════════════════════════════════════════╝');
+  console.log('⏰ Time:', new Date().toISOString());
+  console.log('🔍 Headers:', JSON.stringify(req.headers, null, 2));
+
   const payload = req.body;
   const io = req.app.get('io');
 
-  
+  console.log('📦 Payload object type:', payload.object);
+  console.log('📦 Full payload:', JSON.stringify(payload, null, 2));
 
-  
   try {
     if (payload.object === 'instagram') {
-      
-      // El ID que llega es del usuario que envía el mensaje, NO de tu cuenta
+      console.log('\n>>> ROUTING TO: Instagram Handler <<<');
+
       const senderUserId = payload.entry[0].id;
-      
-      // Buscar cualquier registro de Instagram conectado (no por igUserId específico)
-      const oauthRecord = await OAuth.findOne({ 
+      console.log('🔍 Instagram sender/page user ID:', senderUserId);
+
+      console.log('🔍 Searching for OAuth record...');
+      console.log('   Channel: instagram');
+      console.log('   igUserId:', senderUserId);
+      console.log('   Status: connected');
+
+      const oauthRecord = await OAuth.findOne({
         channel: 'instagram',
         igUserId: senderUserId,
         status: 'connected'
       });
 
       if (!oauthRecord) {
-        console.error('❌ No connected Instagram OAuth found');
-        
-        // Debug: buscar todos los registros de Instagram para ver qué hay
+        console.error('❌ No connected Instagram OAuth found for this user ID');
+
         const allInstagramRecords = await OAuth.find({ channel: 'instagram' });
-        
+        console.log('📋 All Instagram OAuth records in database:', allInstagramRecords.length);
+        allInstagramRecords.forEach((record, index) => {
+          console.log(`   [${index + 1}] igUserId: ${record.igUserId}, status: ${record.status}, tenant: ${record.tenant}`);
+        });
+
         return res.status(500).json({ error: 'No Instagram OAuth configuration found' });
       }
-      
-      // Obtener el accessToken de la base de datos
+
+      console.log('✅ OAuth record found:', oauthRecord._id);
+      console.log('   Tenant:', oauthRecord.tenant);
+      console.log('   igUserId:', oauthRecord.igUserId);
+      console.log('   Status:', oauthRecord.status);
+
       const accessToken = oauthRecord.accessToken;
       if (!accessToken) {
-        console.error('❌ No access token found for Instagram OAuth');
+        console.error('❌ No access token found in OAuth record');
         return res.status(500).json({ error: 'No access token available' });
       }
-      
-      // Debug: verificar el token
-      
+
+      console.log('✅ Access token available (length:', accessToken.length, ')');
       const tenantId = oauthRecord.tenant.toString();
-      
+      console.log('🔐 Tenant ID:', tenantId);
+      console.log('📨 Calling handleInstagramMessage...\n');
+
       await handleInstagramMessage(payload, io, accessToken, tenantId);
+      console.log('✅ Instagram handler completed');
     } 
     else if (payload.object === 'whatsapp_business_account') {
-      
-      // Get tenant from OAuth configuration for WhatsApp
-      const oauthRecord = await OAuth.findOne({ 
+      console.log('\n>>> ROUTING TO: WhatsApp Handler <<<');
+
+      console.log('🔍 Searching for OAuth record...');
+      console.log('   Channel: whatsapp');
+      console.log('   Status: connected');
+
+      const oauthRecord = await OAuth.findOne({
         channel: 'whatsapp',
         status: 'connected'
       });
-      
-      const tenantId = oauthRecord?.tenant?.toString();
-      if (!tenantId) {
+
+      if (!oauthRecord) {
         console.error('❌ No connected WhatsApp OAuth found');
+
+        const allWhatsAppRecords = await OAuth.find({ channel: 'whatsapp' });
+        console.log('📋 All WhatsApp OAuth records in database:', allWhatsAppRecords.length);
+        allWhatsAppRecords.forEach((record, index) => {
+          console.log(`   [${index + 1}] phoneNumberId: ${record.phoneNumberId}, status: ${record.status}, tenant: ${record.tenant}`);
+        });
+
         return res.status(500).json({ error: 'No WhatsApp OAuth configuration found' });
       }
-      
+
+      console.log('✅ OAuth record found:', oauthRecord._id);
+      console.log('   Tenant:', oauthRecord.tenant);
+      console.log('   Phone Number ID:', oauthRecord.phoneNumberId);
+      console.log('   Status:', oauthRecord.status);
+
+      const tenantId = oauthRecord.tenant.toString();
+      console.log('🔐 Tenant ID:', tenantId);
+      console.log('📨 Calling handleWhatsAppMessage...\n');
+
       await handleWhatsAppMessage(payload, io, tenantId);
+      console.log('✅ WhatsApp handler completed');
     }
     else if (payload.object === 'page') {
-      
-      // Get tenant from OAuth configuration for Messenger
-      const oauthRecord = await OAuth.findOne({ 
+      console.log('\n>>> ROUTING TO: Messenger Handler <<<');
+
+      console.log('🔍 Searching for OAuth record...');
+      console.log('   Channel: messenger');
+      console.log('   Status: connected');
+
+      const oauthRecord = await OAuth.findOne({
         channel: 'messenger',
         status: 'connected'
       });
-      
+
       if (!oauthRecord) {
         console.error('❌ No connected Messenger OAuth found');
+
+        const allMessengerRecords = await OAuth.find({ channel: 'messenger' });
+        console.log('📋 All Messenger OAuth records in database:', allMessengerRecords.length);
+        allMessengerRecords.forEach((record, index) => {
+          console.log(`   [${index + 1}] pageId: ${record.pageId}, status: ${record.status}, tenant: ${record.tenant}`);
+        });
+
         return res.status(500).json({ error: 'No Messenger OAuth configuration found' });
       }
-      
+
+      console.log('✅ OAuth record found:', oauthRecord._id);
+      console.log('   Tenant:', oauthRecord.tenant);
+      console.log('   Page ID:', oauthRecord.pageId);
+      console.log('   Status:', oauthRecord.status);
+
       const accessToken = oauthRecord.accessToken;
       if (!accessToken) {
-        console.error('❌ No access token found for Messenger OAuth');
+        console.error('❌ No access token found in OAuth record');
         return res.status(500).json({ error: 'No access token available' });
       }
-      
+
+      console.log('✅ Access token available (length:', accessToken.length, ')');
       const tenantId = oauthRecord.tenant.toString();
-      
+      console.log('🔐 Tenant ID:', tenantId);
+      console.log('📨 Calling handleMessengerMessage...\n');
+
       await handleMessengerMessage(payload, io, accessToken, tenantId);
+      console.log('✅ Messenger handler completed');
     }
     else {
+      console.warn('⚠️  Unknown webhook object type:', payload.object);
+      console.warn('⚠️  This webhook will be acknowledged but not processed');
     }
   } catch (error) {
-    console.error('❌ Webhook processing error:', error.message);
+    console.error('\n╔════════════════════════════════════════╗');
+    console.error('║       WEBHOOK PROCESSING ERROR         ║');
+    console.error('╚════════════════════════════════════════╝');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Payload that caused error:', JSON.stringify(payload, null, 2));
     return res.status(500).json({ error: 'Webhook processing failed' });
   }
 
+  console.log('✅ Webhook processing completed successfully');
+  console.log('📤 Sending 200 OK response\n');
   res.sendStatus(200);
 });
 
