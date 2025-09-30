@@ -183,14 +183,25 @@ oauthSchema.methods.updateConnection = function(connectionData) {
 };
 
 oauthSchema.methods.disconnect = function() {
+  console.log(`🔄 Disconnecting OAuth for channel: ${this.channel}, tenant: ${this.tenant}`);
+  
+  // Siempre cambiar el status
   this.status = 'disconnected';
-  this.accessToken = null;
-  this.refreshToken = null;
-  this.expiresAt = null;
-  this.pageId = null;
-  this.pageName = null;
-  this.phoneNumberId = null;
-  this.phoneNumber = null; 
+  
+  // Solo limpiar campos que están definidos (no undefined)
+  const fieldsToClean = [
+    'accessToken', 'longLivedToken', 'refreshToken', 'expiresAt',
+    'pageId', 'pageName', 'phoneNumberId', 'phoneNumber', 
+    'businessId', 'igUserId'
+  ];
+  
+  fieldsToClean.forEach(field => {
+    if (this[field] !== undefined) {
+      this[field] = null;
+    }
+  });
+  
+  console.log(`After disconnect - status: ${this.status}`);
   
   return this.save();
 };
