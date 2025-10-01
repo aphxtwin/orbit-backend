@@ -68,54 +68,66 @@ function parseInstagramWebhookPayload(rawPayload) {
 
 async function handleInstagramMessage(rawMsg, io, accessToken, tenantId) {
   try {
-    console.log('🚀 Starting Instagram message handling...');
-    console.log('🔍 tenantId:', tenantId);
-    console.log('🔍 accessToken length:', accessToken?.length);
-    
+    console.log('\n========================================');
+    console.log('🚀 INSTAGRAM MESSAGE RECEIVED');
+    console.log('========================================');
+    console.log('📥 Raw payload:', JSON.stringify(rawMsg, null, 2));
+    console.log('🔐 Tenant ID:', tenantId);
+    console.log('🔑 Access token length:', accessToken?.length);
+    console.log('🔑 Access token preview:', accessToken ? `${accessToken.substring(0, 15)}...` : 'MISSING');
+    console.log('⏰ Timestamp:', new Date().toISOString());
+
     if (!tenantId) {
+      console.error('❌ CRITICAL: No tenant ID provided');
       throw new Error('❌ Could not determine tenant from access token');
     }
 
-    console.log('🔍 About to parse Instagram payload...');
+    console.log('\n--- Parsing Instagram Payload ---');
     const parsedMsg = parseInstagramWebhookPayload(rawMsg);
-    console.log('🔍 Parsed message result:', parsedMsg);
+    console.log('✅ Parsed message:', JSON.stringify(parsedMsg, null, 2));
     
     if (!parsedMsg) {
-      console.log('🔄 Skipping echo message - no parsed message');
+      console.log('🔄 SKIPPED: Echo message detected');
+      console.log('========================================\n');
       return { status: 200, message: 'Echo message skipped' };
     }
-    
-    console.log('✅ Message parsed successfully, getting/creating user...');
-    // Get or create user
+
+    console.log('\n--- User Management ---');
+    console.log('🔍 Getting/creating user for sender:', parsedMsg.sender);
     const user = await getUserOrCreate(parsedMsg.sender, null, accessToken, 'instagram', tenantId);
-    console.log('✅ User created/found:', user._id);
-    
-    // Find conversation by tenant and external user ID
-    console.log('🔍 Looking for existing conversation...');
+    console.log('✅ User ready - ID:', user._id, '| External ID:', user.externalUserId);
+
+    console.log('\n--- Conversation Management ---');
+    console.log('🔍 Searching for existing conversation...');
+    console.log('   Platform: instagram');
+    console.log('   Tenant:', tenantId);
+    console.log('   Participant:', user._id);
+
     let conversation = await Conversation.findOne({
       tenantId: tenantId,
       platform: 'instagram',
       participants: user._id
     });
-    
-    console.log('🔍 Conversation search result:', conversation?._id || 'Not found');
 
     if (!conversation) {
-      console.log('🔍 Creating new conversation...');
-      // Create conversation with just the external user (no internal user required)
+      console.log('📝 No existing conversation found - creating new one');
       conversation = await Conversation.create({
-        participants: [user._id], // Only the external user
+        participants: [user._id],
         platform: 'instagram',
         tenantId: tenantId,
         type: 'direct'
       });
-      console.log('✅ Created new conversation:', conversation._id);
+      console.log('✅ New conversation created:', conversation._id);
     } else {
       console.log('✅ Found existing conversation:', conversation._id);
     }
 
-    console.log('🔍 Creating message...');
-    // Create message
+    console.log('\n--- Message Creation ---');
+    console.log('📝 Creating message in database...');
+    console.log('   Content:', parsedMsg.content);
+    console.log('   Sender:', user._id);
+    console.log('   Conversation:', conversation._id);
+
     const message = await Message.create({
       conversation: conversation._id,
       content: parsedMsg.content,
@@ -124,19 +136,17 @@ async function handleInstagramMessage(rawMsg, io, accessToken, tenantId) {
       timestamp: parsedMsg.timestamp || Date.now(),
       type: 'text',
       status: 'sent',
-      direction: 'inbound' // Webhook messages are always inbound
+      direction: 'inbound'
     });
-    console.log('✅ Message created:', message._id);
+    console.log('✅ Message saved - ID:', message._id);
 
-    // Update conversation's last message
-    console.log('🔍 Updating conversation last message...');
+    console.log('\n--- Updating Conversation ---');
     await Conversation.findByIdAndUpdate(conversation._id, {
       lastMessage: message._id
     });
-    console.log('✅ Conversation updated');
+    console.log('✅ Conversation lastMessage updated');
 
-    // Emit to frontend
-    console.log('🔍 Emitting to frontend...');
+    console.log('\n--- Socket Emission ---');
     const conv = {
       id: message._id,
       content: message.content,
@@ -145,16 +155,21 @@ async function handleInstagramMessage(rawMsg, io, accessToken, tenantId) {
       timestamp: message.timestamp,
       platform: 'instagram',
       read: false,
-      direction: 'inbound' // Always inbound for webhook messages
+      direction: 'inbound'
     };
+    console.log('📡 Emitting to socket.io event: instagram:event');
+    console.log('📦 Event payload:', JSON.stringify(conv, null, 2));
 
     io.emit('instagram:event', conv);
-    console.log('✅ Event emitted to frontend');
+    console.log('✅ Event emitted successfully');
+    console.log('========================================\n');
 
     return { status: 200, conversationId: conversation._id };
   } catch (error) {
-    console.error('❌ handleInstagramMessage error:', error.message);
-    console.error('❌ Full error:', error);
+    console.error('\n❌❌❌ INSTAGRAM ERROR ❌❌❌');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('========================================\n');
     return { status: 500, error: error.message };
   }
 }

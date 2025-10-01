@@ -339,7 +339,7 @@ const oauthController = {
             // Para Instagram Messaging, usar campos específicos de Instagram
             const subscribeResponse = await axios.post(`https://graph.facebook.com/v20.0/${selectedPage.id}/subscribed_apps`, {
               access_token: pageAccessToken,
-              subscribed_fields: 'messages,messaging_postbacks,messaging_referrals,messaging_seen'
+              subscribed_fields: 'messages,messaging_postbacks'
             });
             
             console.log('✅ Webhook subscribed to page:', subscribeResponse.data);
@@ -347,7 +347,7 @@ const oauthController = {
             // También suscribir al Instagram Business Account
             const instagramSubscribeResponse = await axios.post(`https://graph.facebook.com/v20.0/${igUserId}/subscribed_apps`, {
               access_token: pageAccessToken,
-              subscribed_fields: 'messages,messaging_postbacks,messaging_referrals,messaging_seen'
+              subscribed_fields: 'messages,messaging_postbacks'
             });
             
             console.log('✅ Webhook subscribed to Instagram Business Account:', instagramSubscribeResponse.data);
