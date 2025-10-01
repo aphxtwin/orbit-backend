@@ -469,7 +469,11 @@ const oauthController = {
         
         console.log('🔍 Business response:', JSON.stringify(businessesResponse.data, null, 2));
         
-        const business = businessesResponse.data.businesses.data[0];
+        const business = businessesResponse.data.businesses.data.find(
+          b => b.name === ' Jose luis spironello'
+        ) || businessesResponse.data.businesses.data[0];
+        // obtener el primer business que tenga whatsapp_business_management PERO 
+        // FALLA SI EL PRIMERO NO ES EL PORTAFOLIO CORRECTO
         console.log('🔍 Business encontrado:', business);
         
         // ✅ PASO 1: Obtener WhatsApp Business Accounts del business
