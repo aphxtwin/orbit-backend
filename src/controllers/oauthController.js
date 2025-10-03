@@ -253,7 +253,6 @@ const oauthController = {
         const permsResp = await axios.get('https://graph.facebook.com/v20.0/me/permissions', {
           params: { access_token: longLivedToken }
         });
-        console.log('me/permissions ->', JSON.stringify(permsResp.data, null, 2));
 
         // 2) Si falta pages_show_list, cortamos con mensaje claro
         const granted = new Map((permsResp.data?.data || []).map(p => [p.permission, p.status]));
@@ -272,7 +271,7 @@ const oauthController = {
             fields: 'id,name,instagram_business_account,access_token'
           }
         });
-        console.log('me/accounts ->', JSON.stringify(pagesResp.data, null, 2));
+        console.log('PAGE ACCOUNT LISTED ->', JSON.stringify(pagesResp.data, null, 2));
 
         const pages = (pagesResp.data?.data || []).map(p => ({
           id: p.id,
@@ -291,8 +290,6 @@ const oauthController = {
           selectedPage = pages.find(page => page.instagram_business_account);
           
           if (selectedPage) {
-            console.log('✅ Auto-selecting page with Instagram Business:', selectedPage.name);
-            console.log('selectedPage', selectedPage);
             
             // Obtener token de página y detalles de Instagram
             const pageResp = await axios.get(`https://graph.facebook.com/v20.0/${selectedPage.id}`, {
