@@ -313,6 +313,35 @@ const oauthController = {
           }
         }
 
+        // En la línea 274, después del log existente, agregar:
+        console.log('�� INSTAGRAM ACCOUNTS MANAGED:', pages.length);
+        pages.forEach(page => {
+          if (page.instagram_business_account) {
+            console.log(`✅ IG Account: ${page.name} (ID: ${page.instagram_business_account.id})`);
+          }
+        });
+
+        // Agregar lectura de datos de Instagram
+        if (igUserId && pageAccessToken) {
+          try {
+            const igAccountResponse = await axios.get(`https://graph.facebook.com/v20.0/${igUserId}`, {
+              params: {
+                fields: 'id,name,username,followers_count,media_count',
+                access_token: pageAccessToken
+              }
+            });
+            
+            console.log('📊 IG ACCOUNT DATA READ:', {
+              username: igAccountResponse.data.username,
+              followers: igAccountResponse.data.followers_count,
+              media: igAccountResponse.data.media_count
+            });
+            
+          } catch (igError) {
+            console.error('❌ IG Account read failed:', igError.response?.data?.error?.message);
+          }
+        }
+
         // 5) Guardar conexión según si se encontró página o no
         if (selectedPage && igUserId) {
           // Conexión completa automática
@@ -522,6 +551,13 @@ const oauthController = {
 
         console.log('✅ OAuth actualizado con phoneNumber:', phoneNumber);
         console.log('✅ OAuth actualizado con phoneNumberId:', phoneNumber.id);
+        
+        // En la línea 467, después del log existente, agregar:
+        console.log('📊 WHATSAPP BUSINESS MANAGED:', wabaAccounts.length);
+
+        // En la línea 508, después del log existente, agregar:
+        console.log('�� WHATSAPP PHONE NUMBERS MANAGED:', phoneNumbers.length);
+        console.log(`✅ Phone: ${phoneNumber.display_phone_number} (${phoneNumber.verified_name})`);
         
         // ✅ Redirigir al frontend - WhatsApp conectado completamente
         const frontendUrl = process.env.FRONTEND_URL || 'https://orbitg.bici-dev.com';
