@@ -276,7 +276,8 @@ const oauthController = {
         const pages = (pagesResp.data?.data || []).map(p => ({
           id: p.id,
           name: p.name,
-          instagram_business_account: p.instagram_business_account // Agregar esto
+          instagram_business_account: p.instagram_business_account, // Agregar esto
+          access_token: p.access_token 
         }));
 
         // 4) INTEGRAR SELECT PAGE: Automáticamente seleccionar la primera página con Instagram
@@ -290,22 +291,14 @@ const oauthController = {
           selectedPage = pages.find(page => page.instagram_business_account);
           
           if (selectedPage) {
-            
-            // Obtener token de página y detalles de Instagram
-            const pageResp = await axios.get(`https://graph.facebook.com/v20.0/${selectedPage.id}`, {
-              params: {
-                fields: 'access_token,name,instagram_business_account',
-                access_token: longLivedToken
-              }
-            });
-            console.log('pageResp', pageResp.data);
-            pageName = pageResp.data?.name;
-            pageAccessToken = pageResp.data?.access_token;
+            // Usar directamente los datos que ya tenemos de selectedPage
+            pageName = selectedPage.name;
+            pageAccessToken = selectedPage.access_token;
             console.log('pageName', pageName);
             console.log('pageAccessToken', pageAccessToken);
-
-            if (pageResp.data?.instagram_business_account) {
-              igUserId = pageResp.data.instagram_business_account.id;
+          
+            if (selectedPage.instagram_business_account) {
+              igUserId = selectedPage.instagram_business_account.id;
               console.log('✅ Instagram Business Account ID obtained:', igUserId);
             }
           } else {
