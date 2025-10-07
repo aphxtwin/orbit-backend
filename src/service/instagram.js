@@ -31,38 +31,57 @@ async function getTenantFromAccessToken(accessToken) {
 }
 
 function parseInstagramWebhookPayload(rawPayload) {
-  console.log('🔍 Parsing Instagram payload:', JSON.stringify(rawPayload, null, 2));
-  
+  console.log('\n┌──────────────────────────────────────────────────────┐');
+  console.log('│      PARSING INSTAGRAM WEBHOOK PAYLOAD               │');
+  console.log('└──────────────────────────────────────────────────────┘');
+  console.log('📥 [INSTAGRAM_RECEIVE] Full raw payload:', JSON.stringify(rawPayload, null, 2));
+
   const entry = rawPayload?.entry?.[0];
   const messaging = entry?.messaging?.[0];
   const senderId = messaging?.sender?.id;
   const messageText = messaging?.message?.text;
   const timestamp = messaging?.timestamp;
-  
-  console.log('🔍 Extracted data:', { senderId, messageText, timestamp });
-  console.log('🔍 Full messaging object:', JSON.stringify(messaging, null, 2));
-  
+  const messageId = messaging?.message?.mid;
+
+  console.log('📊 [INSTAGRAM_RECEIVE] Extracted payload structure:');
+  console.log('   ├─ Entry ID:', entry?.id);
+  console.log('   ├─ Sender ID:', senderId);
+  console.log('   ├─ Recipient ID:', messaging?.recipient?.id);
+  console.log('   ├─ Message ID (mid):', messageId);
+  console.log('   ├─ Message text:', messageText);
+  console.log('   ├─ Timestamp:', timestamp, timestamp ? `(${new Date(timestamp).toISOString()})` : '');
+  console.log('   └─ is_echo:', messaging?.message?.is_echo);
+
+  console.log('🔍 [INSTAGRAM_RECEIVE] Full messaging object:', JSON.stringify(messaging, null, 2));
+
   if (!senderId || !messageText) {
-    console.log('❌ Missing sender ID or message text');
+    console.error('❌ [INSTAGRAM_RECEIVE] Validation failed - missing required fields');
+    console.error('   ├─ Sender ID present:', !!senderId);
+    console.error('   └─ Message text present:', !!messageText);
     throw new Error('Missing sender ID or message text in Instagram payload');
   }
-  
+
   // CHECK FOR ECHO MESSAGES - Skip them!
-  console.log('🔍 Checking for echo message...');
-  console.log('🔍 is_echo value:', messaging?.message?.is_echo);
-  console.log('🔍 message object:', JSON.stringify(messaging?.message, null, 2));
-  
-  // TEMPORARILY DISABLED FOR TESTING - Remove this comment and uncomment the next lines in production
+  console.log('🔍 [INSTAGRAM_RECEIVE] Echo message check:');
+  console.log('   └─ is_echo value:', messaging?.message?.is_echo);
+
   if (messaging?.message?.is_echo) {
-    console.log('🔄 Skipping echo message');
+    console.log('🔄 [INSTAGRAM_RECEIVE] Echo message detected - SKIPPING');
     return null;
   }
 
-  console.log('✅ Message is not an echo, proceeding...');
+  console.log('✅ [INSTAGRAM_RECEIVE] Payload validation successful - not an echo message');
+  console.log('📦 [INSTAGRAM_RECEIVE] Parsed message data:');
+  console.log('   ├─ Sender:', senderId);
+  console.log('   ├─ Content:', messageText?.substring(0, 100) + (messageText?.length > 100 ? '...' : ''));
+  console.log('   ├─ Message ID:', messageId);
+  console.log('   └─ Timestamp:', timestamp);
+
   return {
     sender: senderId,
     content: messageText,
-    timestamp
+    timestamp,
+    messageId
   };
 }
 
@@ -71,6 +90,7 @@ async function handleInstagramMessage(rawMsg, io, accessToken, tenantId) {
     console.log('\n========================================');
     console.log('🚀 INSTAGRAM MESSAGE RECEIVED');
     console.log('========================================');
+    console.log('[INSTAGRAM_RECEIVE] Webhook hit at:', new Date().toISOString());
     console.log('📥 Raw payload:', JSON.stringify(rawMsg, null, 2));
     console.log('🔐 Tenant ID:', tenantId);
     console.log('🔑 Access token length:', accessToken?.length);
@@ -85,12 +105,14 @@ async function handleInstagramMessage(rawMsg, io, accessToken, tenantId) {
     console.log('\n--- Parsing Instagram Payload ---');
     const parsedMsg = parseInstagramWebhookPayload(rawMsg);
     console.log('✅ Parsed message:', JSON.stringify(parsedMsg, null, 2));
-    
+
     if (!parsedMsg) {
-      console.log('🔄 SKIPPED: Echo message detected');
+      console.log('[INSTAGRAM_RECEIVE] 🔄 SKIPPED: Echo message detected');
       console.log('========================================\n');
       return { status: 200, message: 'Echo message skipped' };
     }
+
+    console.log('[INSTAGRAM_RECEIVE] Processing inbound message from:', parsedMsg.sender);
 
     console.log('\n--- User Management ---');
     console.log('🔍 Getting/creating user for sender:', parsedMsg.sender);
@@ -162,6 +184,7 @@ async function handleInstagramMessage(rawMsg, io, accessToken, tenantId) {
 
     io.emit('instagram:event', conv);
     console.log('✅ Event emitted successfully');
+    console.log('[INSTAGRAM_RECEIVE] ✅ Message processed and saved successfully');
     console.log('========================================\n');
 
     return { status: 200, conversationId: conversation._id };

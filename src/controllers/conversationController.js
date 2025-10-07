@@ -187,6 +187,7 @@ const conversationController = {
       // Send the message to the external platform
       try {
         if (conversation.platform === 'instagram') {
+          console.log('[INSTAGRAM_SEND] 📤 Sending message to Instagram at:', new Date().toISOString());
           console.log('Sending message to Instagram');
           console.log('🔍 OAuth Record:', {
             tenant: oauthRecord.tenant,
@@ -256,8 +257,10 @@ const conversationController = {
           );
 
           console.log('✅ Instagram message sent:', response.data);
+          console.log('[INSTAGRAM_SEND] ✅ Message sent to Meta API successfully');
 
         } else if (conversation.platform === 'whatsapp') {
+          console.log('[WHATSAPP_SEND] 📤 Sending message to WhatsApp at:', new Date().toISOString());
           // Get the recipient
           const otherParticipant = conversation.participants.find(p => p.toString() !== sender);
           if (!otherParticipant) {
@@ -296,6 +299,8 @@ const conversationController = {
           );
 
           console.log('✅ WhatsApp message sent:', response.data);
+          console.log('[WHATSAPP_SEND] ✅ Message sent to Meta API successfully');
+
         } else if (conversation.platform === 'messenger') {
           console.log('Sending message to Messenger');
           
@@ -332,6 +337,7 @@ const conversationController = {
         await Message.findByIdAndUpdate(message._id, { status: 'sent' });
 
       } catch (platformError) {
+        console.error(`[${conversation.platform.toUpperCase()}_SEND] ❌ Failed to send message to ${conversation.platform}`);
         console.error('❌ Failed to send message to platform:', platformError.response?.data || platformError.message);
         
         // Update message status to failed
