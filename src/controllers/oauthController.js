@@ -538,6 +538,7 @@ const oauthController = {
         // ✅ Actualizar OAuth con businessId y phoneNumberId
         await oauth.updateConnection({
           businessId: business.id,
+          wabaId: wabaAccount.id,
           phoneNumberId: phoneNumber.id,
           phoneNumber: phoneNumber.display_phone_number
         });

@@ -54,6 +54,10 @@ const oauthSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  wabaId: {                 // ← ADD THIS
+    type: String,
+    trim: true
+  },
   igUserId: { 
     type: String 
   },
@@ -128,6 +132,10 @@ oauthSchema.methods.updateConnection = function(connectionData) {
     this.status = connectionData.status;
   } else {
     this.status = 'connected';
+  }
+
+  if (connectionData.wabaId) {
+    this.wabaId = connectionData.wabaId;
   }
   
   // ✅ VALIDAR: Solo actualizar si el valor existe

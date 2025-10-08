@@ -13,7 +13,6 @@ function parseWhatsAppWebhookPayload(rawPayload) {
   const messages = value?.messages?.[0];
 
   if (!messages) {
-    console.log('[WHATSAPP] No messages found - possibly status update');
     return null;
   }
 
@@ -23,13 +22,11 @@ function parseWhatsAppWebhookPayload(rawPayload) {
   const messageId = messages.id;
 
   if (!senderId || !messageText) {
-    console.error('[WHATSAPP] Missing required fields: sender or message text');
     throw new Error('Missing sender ID or message text in WhatsApp payload');
   }
 
   // CHECK FOR ECHO MESSAGES - Skip them!
   if (messages.is_echo) {
-    console.log('[WHATSAPP] Echo message detected - skipping');
     return null;
   }
 
@@ -43,21 +40,15 @@ function parseWhatsAppWebhookPayload(rawPayload) {
 
 async function handleWhatsAppMessage(rawMsg, io, tenantId) {
   try {
-    console.log('[WHATSAPP_RECEIVE] Message received for tenant:', tenantId);
-
     if (!tenantId) {
-      console.error('[WHATSAPP_RECEIVE] No tenant ID provided');
       throw new Error('Could not determine tenant');
     }
 
     const parsedMsg = parseWhatsAppWebhookPayload(rawMsg);
 
     if (!parsedMsg) {
-      console.log('[WHATSAPP_RECEIVE] Skipped - no valid message content');
       return { status: 200, skipped: true };
     }
-
-    console.log('[WHATSAPP_RECEIVE] Processing message from:', parsedMsg.sender);
 
     const user = await getUserOrCreate(parsedMsg.sender, null, null, 'whatsapp', tenantId);
 
@@ -74,7 +65,6 @@ async function handleWhatsAppMessage(rawMsg, io, tenantId) {
         tenantId: tenantId,
         type: 'direct'
       });
-      console.log('[WHATSAPP_RECEIVE] New conversation created:', conversation._id);
     }
 
     const message = await Message.create({
@@ -104,11 +94,9 @@ async function handleWhatsAppMessage(rawMsg, io, tenantId) {
     };
 
     io.emit('whatsapp:event', conv);
-    console.log('[WHATSAPP_RECEIVE] Message processed successfully');
 
     return { status: 200, conversationId: conversation._id };
   } catch (error) {
-    console.error('[WHATSAPP_RECEIVE] Error:', error.message);
     return { status: 500, error: error.message };
   }
 }
