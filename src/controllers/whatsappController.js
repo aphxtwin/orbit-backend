@@ -24,18 +24,18 @@ async function getWhatsAppTemplates(req, res) {
       });
     }
 
-    if (!oauth.businessId) {
+    if (!oauth.wabaId) {
       console.log('[TEMPLATES] Business ID not found for tenant:', tenantId);
       return res.status(400).json({
         error: 'WhatsApp Business Account not configured.'
       });
     }
 
-    console.log('[TEMPLATES] Fetching from Business ID:', oauth.businessId);
+    console.log('[TEMPLATES] Fetching from Business ID:', oauth.wabaId);
 
     // Fetch templates from Meta Graph API
     const response = await axios.get(
-      `https://graph.facebook.com/v22.0/${oauth.businessId}/message_templates`,
+      `https://graph.facebook.com/v22.0/${oauth.wabaId}/message_templates`,
       {
         headers: {
           'Authorization': `Bearer ${oauth.accessToken}`,
