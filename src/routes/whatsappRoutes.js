@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const { sendWhatsAppMessage } = require('../service/whatsapp');
-const { getWhatsAppTemplates } = require('../controllers/whatsappController');
+const { getWhatsAppTemplates, sendWhatsAppTemplate } = require('../controllers/whatsappController');
 
 router.use(authMiddleware);
 
@@ -85,5 +85,8 @@ router.post('/send-message', async (req, res) => {
 
 // GET /whatsapp/templates
 router.get('/templates', getWhatsAppTemplates);
+
+// POST /whatsapp/send-template
+router.post('/send-template', sendWhatsAppTemplate);
 
 module.exports = router;

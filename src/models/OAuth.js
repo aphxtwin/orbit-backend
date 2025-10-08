@@ -192,25 +192,25 @@ oauthSchema.methods.updateConnection = function(connectionData) {
 
 oauthSchema.methods.disconnect = function() {
   console.log(`🔄 Disconnecting OAuth for channel: ${this.channel}, tenant: ${this.tenant}`);
-  
+
   // Siempre cambiar el status
   this.status = 'disconnected';
-  
+
   // Solo limpiar campos que están definidos (no undefined)
   const fieldsToClean = [
     'accessToken', 'longLivedToken', 'refreshToken', 'expiresAt',
-    'pageId', 'pageName', 'phoneNumberId', 'phoneNumber', 
-    'businessId', 'igUserId'
+    'pageId', 'pageName', 'phoneNumberId', 'phoneNumber',
+    'businessId', 'wabaId', 'igUserId'
   ];
-  
+
   fieldsToClean.forEach(field => {
     if (this[field] !== undefined) {
       this[field] = null;
     }
   });
-  
+
   console.log(`After disconnect - status: ${this.status}`);
-  
+
   return this.save();
 };
 

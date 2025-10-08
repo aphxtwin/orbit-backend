@@ -32,6 +32,8 @@ async function getWhatsAppTemplates(req, res) {
     }
 
     console.log('[TEMPLATES] Fetching from Business ID:', oauth.wabaId);
+    console.log('[TEMPLATES] Using access token:', oauth.accessToken?.substring(0, 20) + '...');
+    console.log('[TEMPLATES] Request URL:', `https://graph.facebook.com/v22.0/${oauth.wabaId}/message_templates`);
 
     // Fetch templates from Meta Graph API
     const response = await axios.get(
@@ -47,9 +49,13 @@ async function getWhatsAppTemplates(req, res) {
       }
     );
 
+    console.log('[TEMPLATES] Meta API Response Status:', response.status);
+    console.log('[TEMPLATES] Meta API Response Data:', JSON.stringify(response.data, null, 2));
+
     const templates = response.data.data || [];
 
     console.log('[TEMPLATES] Successfully fetched', templates.length, 'templates');
+    console.log('[TEMPLATES] Template names:', templates.map(t => t.name).join(', '));
 
     res.json({
       success: true,
@@ -76,6 +82,134 @@ async function getWhatsAppTemplates(req, res) {
   }
 }
 
+/**
+ * Send WhatsApp template message
+ */
+async function sendWhatsAppTemplate(req, res) {
+  try {
+    const tenantId = req.tenantId;
+    const { to, templateName, language = 'en', variables = {} } = req.body;
+
+    console.log('[SEND_TEMPLATE] Request:', { tenantId, to, templateName, language, variables });
+
+    // Validations
+    if (!to) {
+      return res.status(400).json({ error: 'Phone number (to) is required' });
+    }
+
+    if (!templateName) {
+      return res.status(400).json({ error: 'Template name is required' });
+    }
+
+    // Find the WhatsApp OAuth configuration
+    const oauth = await OAuth.findOne({
+      tenant: tenantId,
+      channel: 'whatsapp',
+      status: 'connected'
+    });
+
+    if (!oauth) {
+      console.log('[SEND_TEMPLATE] WhatsApp not configured for tenant:', tenantId);
+      return res.status(400).json({
+        error: 'WhatsApp not configured for this tenant. Please complete setup first.'
+      });
+    }
+
+    if (!oauth.phoneNumberId) {
+      console.log('[SEND_TEMPLATE] Phone number ID not found for tenant:', tenantId);
+      return res.status(400).json({
+        error: 'WhatsApp phone number not configured.'
+      });
+    }
+
+    console.log('[SEND_TEMPLATE] Using phone number ID:', oauth.phoneNumberId);
+    console.log('[SEND_TEMPLATE] Using access token:', oauth.accessToken?.substring(0, 20) + '...');
+
+    // Build template components with variables
+    const components = [];
+
+    // Check if template has variables and build parameters
+    if (Object.keys(variables).length > 0) {
+      const parameters = [];
+
+      // Variables are indexed starting from 1
+      const sortedIndices = Object.keys(variables)
+        .map(k => parseInt(k))
+        .sort((a, b) => a - b);
+
+      for (const index of sortedIndices) {
+        parameters.push({
+          type: 'text',
+          text: variables[index]
+        });
+      }
+
+      components.push({
+        type: 'body',
+        parameters: parameters
+      });
+
+      console.log('[SEND_TEMPLATE] Template components:', JSON.stringify(components, null, 2));
+    }
+
+    // Build the message payload
+    const messagePayload = {
+      messaging_product: 'whatsapp',
+      to: to,
+      type: 'template',
+      template: {
+        name: templateName,
+        language: {
+          code: language
+        },
+        ...(components.length > 0 && { components })
+      }
+    };
+
+    console.log('[SEND_TEMPLATE] Message payload:', JSON.stringify(messagePayload, null, 2));
+
+    // Send template via Meta API
+    const response = await axios.post(
+      `https://graph.facebook.com/v22.0/${oauth.phoneNumberId}/messages`,
+      messagePayload,
+      {
+        headers: {
+          'Authorization': `Bearer ${oauth.accessToken}`,
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+
+    console.log('[SEND_TEMPLATE] Meta API Response:', response.data);
+
+    res.json({
+      success: true,
+      message: 'WhatsApp template sent successfully',
+      data: response.data,
+      phoneNumberId: oauth.phoneNumberId,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('[SEND_TEMPLATE] Error:', error.message);
+
+    if (error.response?.data?.error) {
+      console.error('[SEND_TEMPLATE] Meta API Error:', error.response.data.error);
+      return res.status(500).json({
+        error: `Meta API Error: ${error.response.data.error.message}`,
+        code: error.response.data.error.code,
+        details: error.response.data.error
+      });
+    }
+
+    res.status(500).json({
+      error: 'Failed to send WhatsApp template',
+      details: error.message
+    });
+  }
+}
+
 module.exports = {
-  getWhatsAppTemplates
+  getWhatsAppTemplates,
+  sendWhatsAppTemplate
 };
