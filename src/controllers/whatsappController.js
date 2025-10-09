@@ -91,10 +91,15 @@ async function getWhatsAppTemplates(req, res) {
 async function sendWhatsAppTemplate(req, res) {
   try {
     const tenantId = req.tenantId;
-    const userId = req.userId;
+    const userId = req.user?._id || req.appUser?._id;
     const { conversationId, to, templateName, language = 'en', variables = {} } = req.body;
 
     console.log('[SEND_TEMPLATE] Request:', { tenantId, userId, conversationId, to, templateName, language, variables });
+
+    if (!userId) {
+      console.error('[SEND_TEMPLATE] No user ID found in request');
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
 
     // Validations
     if (!conversationId) {
