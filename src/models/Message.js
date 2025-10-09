@@ -20,6 +20,10 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  renderedContent: {
+    type: String,
+    required: false
+  },
   type: {
     type: String,
     enum: ['text', 'image', 'file', 'template'],
@@ -38,6 +42,16 @@ const messageSchema = new mongoose.Schema({
   timestamp: {
     type: Date,
     required:true
+  },
+  templateMetadata: {
+    type: {
+      templateId: String,
+      templateName: String,
+      language: String,
+      variables: Object,
+      metaMessageId: String
+    },
+    required: false
   }
 },{
   timestamps:true

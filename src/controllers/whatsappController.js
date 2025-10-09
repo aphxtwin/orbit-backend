@@ -1,5 +1,8 @@
 const OAuth = require('../models/OAuth');
+const Message = require('../models/Message');
+const Conversation = require('../models/Conversation');
 const axios = require('axios');
+const { renderTemplate } = require('../utils/templateUtils');
 
 /**
  * Fetch WhatsApp message templates for a tenant
@@ -88,11 +91,16 @@ async function getWhatsAppTemplates(req, res) {
 async function sendWhatsAppTemplate(req, res) {
   try {
     const tenantId = req.tenantId;
-    const { to, templateName, language = 'en', variables = {} } = req.body;
+    const userId = req.userId;
+    const { conversationId, to, templateName, language = 'en', variables = {} } = req.body;
 
-    console.log('[SEND_TEMPLATE] Request:', { tenantId, to, templateName, language, variables });
+    console.log('[SEND_TEMPLATE] Request:', { tenantId, userId, conversationId, to, templateName, language, variables });
 
     // Validations
+    if (!conversationId) {
+      return res.status(400).json({ error: 'Conversation ID is required' });
+    }
+
     if (!to) {
       return res.status(400).json({ error: 'Phone number (to) is required' });
     }
@@ -124,6 +132,36 @@ async function sendWhatsAppTemplate(req, res) {
 
     console.log('[SEND_TEMPLATE] Using phone number ID:', oauth.phoneNumberId);
     console.log('[SEND_TEMPLATE] Using access token:', oauth.accessToken?.substring(0, 20) + '...');
+
+    // Fetch the template to get its structure
+    console.log('[SEND_TEMPLATE] Fetching template structure from Meta API...');
+    const templateResponse = await axios.get(
+      `https://graph.facebook.com/v22.0/${oauth.wabaId}/message_templates`,
+      {
+        headers: {
+          'Authorization': `Bearer ${oauth.accessToken}`,
+        },
+        params: {
+          fields: 'id,name,status,category,language,components',
+          name: templateName
+        }
+      }
+    );
+
+    const template = templateResponse.data.data?.find(
+      t => t.name === templateName && t.language === language
+    );
+
+    if (!template) {
+      console.log('[SEND_TEMPLATE] Template not found:', templateName, language);
+      return res.status(404).json({ error: `Template '${templateName}' not found` });
+    }
+
+    console.log('[SEND_TEMPLATE] Template found:', template.id, template.name);
+
+    // Render template content
+    const { rawContent, renderedContent } = renderTemplate(template.components, variables);
+    console.log('[SEND_TEMPLATE] Rendered content:', renderedContent);
 
     // Build template components with variables
     const components = [];
@@ -182,11 +220,42 @@ async function sendWhatsAppTemplate(req, res) {
 
     console.log('[SEND_TEMPLATE] Meta API Response:', response.data);
 
+    // Create message in database
+    const newMessage = await Message.create({
+      conversation: conversationId,
+      sender: userId,
+      tenantId: tenantId,
+      content: rawContent,
+      renderedContent: renderedContent,
+      type: 'template',
+      status: 'sent',
+      direction: 'outbound',
+      timestamp: new Date(),
+      templateMetadata: {
+        templateId: template.id,
+        templateName: templateName,
+        language: language,
+        variables: variables,
+        metaMessageId: response.data.messages?.[0]?.id
+      }
+    });
+
+    console.log('[SEND_TEMPLATE] Message saved to database:', newMessage._id);
+
+    // Update conversation's lastMessage
+    await Conversation.findByIdAndUpdate(conversationId, {
+      lastMessage: newMessage._id,
+      updatedAt: new Date()
+    });
+
+    console.log('[SEND_TEMPLATE] Conversation updated');
+
+    // No WebSocket emit - frontend handles via HTTP response
+
     res.json({
       success: true,
-      message: 'WhatsApp template sent successfully',
-      data: response.data,
-      phoneNumberId: oauth.phoneNumberId,
+      message: newMessage,
+      metaResponse: response.data,
       timestamp: new Date().toISOString()
     });
 

@@ -146,10 +146,10 @@ const oauthController = {
             'instagram_manage_messages',
             'pages_show_list',
             'business_management',
-            'pages_messaging'  // Agregar este permiso
+            'pages_manage_metadata'  // Required for webhook subscriptions
           ];
           authUrl = `https://www.facebook.com/v20.0/dialog/oauth?client_id=${FB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(instagramScopes.join(','))}&response_type=code&state=${encodeURIComponent(state)}`;
-          
+
           console.log("authUrl", authUrl);
           break;
 
