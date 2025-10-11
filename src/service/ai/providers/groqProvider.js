@@ -29,29 +29,57 @@ function getGroqClient() {
 
 /**
  * Envía un mensaje a Groq y recibe una respuesta
- * @param {string} prompt - El mensaje/prompt a enviar
+ * @param {string|Array<{role: string, content: string}>} promptOrMessages - Puede ser:
+ *   - Un string simple (se envía como role: 'user')
+ *   - Un array de mensajes con roles: [{role: 'system', content: '...'}, {role: 'user', content: '...'}]
  * @param {object} options - Opciones adicionales (temperature, maxTokens, etc.)
  * @returns {Promise<string>} - La respuesta del LLM
+ *
+ * @example
+ * // Uso simple
+ * await send("Hola, ¿cómo estás?")
+ *
+ * @example
+ * // Uso con roles
+ * await send([
+ *   { role: 'system', content: 'Eres un asistente de CRM' },
+ *   { role: 'user', content: 'Extrae el nombre' }
+ * ])
  */
-async function send(prompt, options = {}) {
+async function send(promptOrMessages, options = {}) {
   const startTime = Date.now();
 
   try {
     console.log('\n🚀 Enviando mensaje a Groq...');
-    console.log('📝 Prompt:', prompt.substring(0, 100) + (prompt.length > 100 ? '...' : ''));
 
     const client = getGroqClient();
     const config = aiConfig.groq;
 
+    // Detectar si es un string simple o un array de mensajes
+    let messages;
+
+    if (typeof promptOrMessages === 'string') {
+      // Formato simple: convertir a estructura básica
+      messages = [
+        {
+          role: 'user',
+          content: promptOrMessages,
+        },
+      ];
+      console.log('📝 Prompt:', promptOrMessages.substring(0, 100) + (promptOrMessages.length > 100 ? '...' : ''));
+    } else if (Array.isArray(promptOrMessages)) {
+      // Formato avanzado: usar el array directamente
+      messages = promptOrMessages;
+      console.log('📝 Messages:', messages.length, 'mensajes');
+      console.log('   Roles:', messages.map(m => m.role).join(' → '));
+    } else {
+      throw new Error('El parámetro debe ser un string (prompt) o un array de mensajes con roles');
+    }
+
     // Construir request
     const requestParams = {
       model: options.model || config.model,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+      messages: messages,
       temperature: options.temperature ?? config.temperature,
       max_tokens: options.maxTokens || config.maxTokens,
     };
@@ -73,7 +101,7 @@ async function send(prompt, options = {}) {
       logAICall({
         provider: 'groq',
         model: requestParams.model,
-        prompt,
+        prompt: typeof promptOrMessages === 'string' ? promptOrMessages : JSON.stringify(messages),
         response: aiResponse,
         duration,
         tokens: response.usage,
