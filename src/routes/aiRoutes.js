@@ -201,4 +201,60 @@ router.get('/config', (req, res) => {
   }
 });
 
+/**
+ * POST /api/ai/analyze-conversation/:conversationId
+ * Analiza una conversación completa de la base de datos
+ * Extrae datos de contacto y genera resumen
+ *
+ * Body:
+ * {
+ *   "tenantId": "tenant_123"
+ * }
+ */
+router.post('/analyze-conversation/:conversationId', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { tenantId } = req.body;
+
+    // Validación
+    if (!conversationId) {
+      return res.status(400).json({
+        success: false,
+        error: 'El parámetro "conversationId" es requerido',
+      });
+    }
+
+    if (!tenantId) {
+      return res.status(400).json({
+        success: false,
+        error: 'El campo "tenantId" es requerido en el body',
+      });
+    }
+
+    console.log(`\n🔍 Solicitud de análisis de conversación: ${conversationId}`);
+    console.log(`🏢 Tenant: ${tenantId}`);
+
+    // Analizar conversación
+    const resultado = await aiService.analyzeConversation(conversationId, tenantId);
+
+    // Responder
+    res.json({
+      success: true,
+      data: resultado,
+    });
+
+  } catch (error) {
+    console.error('❌ Error en /api/ai/analyze-conversation:', error.message);
+
+    // Determinar código de error apropiado
+    const statusCode = error.message.includes('no encontrada') ||
+                       error.message.includes('no pertenece') ? 404 : 500;
+
+    res.status(statusCode).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 module.exports = router;

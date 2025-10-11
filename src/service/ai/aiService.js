@@ -232,10 +232,114 @@ function getConfig() {
   };
 }
 
+/**
+ * Analiza una conversación completa y extrae información relevante
+ * Lee los mensajes de MongoDB, extrae datos de contacto y genera resumen
+ *
+ * @param {string} conversationId - ID de la conversación a analizar
+ * @param {string} tenantId - ID del tenant (para seguridad multi-tenant)
+ * @returns {Promise<object>} - Datos extraídos: {nombre, email, telefono, interes, resumen}
+ *
+ * @example
+ * const resultado = await aiService.analyzeConversation(
+ *   '507f1f77bcf86cd799439011',
+ *   'tenant_123'
+ * );
+ * console.log(resultado.extractedData.nombre); // "Juan Pérez"
+ */
+async function analyzeConversation(conversationId, tenantId) {
+  const Conversation = require('../../models/Conversation');
+  const Message = require('../../models/Message');
+
+  try {
+    console.log(`\n🔍 Analizando conversación: ${conversationId} (Tenant: ${tenantId})`);
+
+    // 1. Verificar que la conversación existe y pertenece al tenant
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      tenantId: tenantId
+    });
+
+    if (!conversation) {
+      throw new Error('Conversación no encontrada o no pertenece a este tenant');
+    }
+
+    console.log(`✅ Conversación encontrada - Platform: ${conversation.platform}`);
+
+    // 2. Obtener TODOS los mensajes de esta conversación (filtrado por tenant)
+    const messages = await Message.find({
+      conversation: conversationId,
+      tenantId: tenantId,
+      type: 'text' // Solo mensajes de texto (ignorar imágenes, archivos)
+    })
+    .sort({ timestamp: 1 }) // Ordenar cronológicamente (más antiguo primero)
+    .populate('sender', 'name userType') // Traer info del sender
+    .lean(); // Mejor performance (devuelve objetos planos en vez de documentos Mongoose)
+
+    if (messages.length === 0) {
+      throw new Error('No hay mensajes de texto en esta conversación');
+    }
+
+    console.log(`📨 Encontrados ${messages.length} mensajes`);
+
+    // 3. Formatear mensajes en texto legible para la IA
+    const conversationText = messages.map(msg => {
+      // Usar solo etiquetas genéricas (NO el name de DB)
+      // Esto permite que la IA extraiga el nombre real de los mensajes
+      const senderLabel = msg.sender.userType === 'ClientUser' ? 'Cliente' : 'Vendedor';
+
+      return `${senderLabel}: ${msg.content}`;
+    }).join('\n');
+
+    console.log('📝 Conversación formateada para IA');
+    console.log('Preview:', conversationText.substring(0, 200) + '...');
+
+    // 4. Extraer datos de contacto en paralelo (más rápido que uno por uno)
+    console.log('\n🤖 Extrayendo datos de contacto en paralelo...');
+
+    const [nombre, email, telefono, interes] = await Promise.all([
+      extractInfo(conversationText, 'extrae el nombre completo del cliente'),
+      extractInfo(conversationText, 'extrae el email del cliente'),
+      extractInfo(conversationText, 'extrae el número de teléfono del cliente'),
+      extractInfo(conversationText, 'extrae qué producto o servicio busca el cliente (modelo de moto, tipo, uso previsto)')
+    ]);
+
+    // 5. Generar resumen de la conversación
+    console.log('📊 Generando resumen de la conversación...');
+    const resumen = await analyzeMessage(conversationText);
+
+    // 6. Retornar todo estructurado
+    const resultado = {
+      conversationId: conversationId,
+      tenantId: tenantId,
+      platform: conversation.platform,
+      totalMessages: messages.length,
+      extractedData: {
+        nombre: nombre,
+        email: email,
+        telefono: telefono,
+        interes: interes
+      },
+      resumen: resumen,
+      conversationPreview: conversationText.substring(0, 300) + '...'
+    };
+
+    console.log('✅ Análisis completado exitosamente');
+    console.log('Datos extraídos:', resultado.extractedData);
+
+    return resultado;
+
+  } catch (error) {
+    console.error('❌ Error analizando conversación:', error.message);
+    throw error;
+  }
+}
+
 module.exports = {
   sendMessage,
   extractInfo,
   analyzeMessage,
+  analyzeConversation,
   healthCheck,
   getConfig,
 };
