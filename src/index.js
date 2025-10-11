@@ -22,6 +22,7 @@ const appUserRoutes = require('./routes/appUserRoute');
 const ssoRoutes = require('./routes/ssoRoutes');
 const oauthRoutes = require('./routes/oauthRoute');
 const internalUserRoutes = require('./routes/internalUserRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 
 
 const app = express();
@@ -92,6 +93,9 @@ app.use('/oauth', oauthRoutes);
 
 // Rutas de usuarios internos (PROTECTED)
 app.use('/api/internal-users', internalUserRoutes);
+
+// Rutas de IA (PUBLIC - para desarrollo, después proteger)
+app.use('/api/ai', aiRoutes);
 
 
 //Ruta SSO (PUBLIC)
