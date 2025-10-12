@@ -308,7 +308,81 @@ async function analyzeConversation(conversationId, tenantId) {
     console.log('📊 Generando resumen de la conversación...');
     const resumen = await analyzeMessage(conversationText);
 
-    // 6. Retornar todo estructurado
+    // 6. Identificar el ClientUser de esta conversación
+    console.log('\n💾 Buscando ClientUser para actualizar...');
+    console.log('🔍 Participantes de la conversación:', conversation.participants);
+    console.log('🔍 Platform:', conversation.platform);
+    console.log('🔍 TenantId:', tenantId);
+
+    const ClientUser = require('../../models/ClientUser');
+
+    // Buscar específicamente ClientUser que esté en los participantes usando el discriminador
+    const clientUser = await ClientUser.findOne({
+      _id: { $in: conversation.participants },
+      tenantId: tenantId,
+      type: 'ClientUser' // Esto asegura que solo busque ClientUser
+    });
+
+    if (!clientUser) {
+      console.log('⚠️  No se encontró ClientUser en esta conversación');
+      
+      // Debug: mostrar qué tipos de usuarios están en los participantes
+      const User = require('../../models/UserBase').User;
+      const allParticipants = await User.find({
+        _id: { $in: conversation.participants },
+        tenantId: tenantId
+      }).select('_id name type');
+      
+      console.log('🔍 Tipos de participantes encontrados:', 
+        allParticipants.map(p => ({ id: p._id, name: p.name, type: p.type }))
+      );
+    } else {
+      console.log(`✅ ClientUser encontrado: ${clientUser._id}`);
+      console.log('📋 Datos del ClientUser:', {
+        id: clientUser._id,
+        name: clientUser.name,
+        email: clientUser.email,
+        instagramId: clientUser.instagramId,
+        whatsappPhoneNumber: clientUser.whatsappPhoneNumber,
+        type: clientUser.type
+      });
+
+      // 7. Preparar datos para actualizar (solo los que existen)
+      const updateData = {};
+
+      if (nombre) {
+        updateData.name = nombre;
+        console.log(`  📝 Actualizando nombre: "${nombre}"`);
+      }
+
+      if (email) {
+        updateData.email = email;
+        console.log(`  📧 Actualizando email: "${email}"`);
+      }
+
+      if (telefono) {
+        updateData.whatsappPhoneNumber = telefono;
+        console.log(`  📱 Actualizando teléfono: "${telefono}"`);
+      }
+
+      if (resumen) {
+        updateData.observations = resumen;
+        console.log(`  📊 Actualizando observaciones con el resumen`);
+      }
+
+      // 8. Actualizar la base de datos
+      if (Object.keys(updateData).length > 0) {
+        await ClientUser.updateOne(
+          { _id: clientUser._id },
+          { $set: updateData }
+        );
+        console.log('✅ ClientUser actualizado en la base de datos');
+      } else {
+        console.log('ℹ️  No hay datos nuevos para actualizar');
+      }
+    }
+
+    // 9. Retornar todo estructurado
     const resultado = {
       conversationId: conversationId,
       tenantId: tenantId,
@@ -321,7 +395,9 @@ async function analyzeConversation(conversationId, tenantId) {
         interes: interes
       },
       resumen: resumen,
-      conversationPreview: conversationText.substring(0, 300) + '...'
+      conversationPreview: conversationText.substring(0, 300) + '...',
+      updated: clientUser ? true : false,
+      clientUserId: clientUser ? clientUser._id : null
     };
 
     console.log('✅ Análisis completado exitosamente');
