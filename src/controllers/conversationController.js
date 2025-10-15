@@ -439,6 +439,54 @@ const conversationController = {
       console.error('Backend: Error getting message by ID:', error);
       res.status(500).json({ error: error.message });
     }
+  },
+
+  async markAsRead(req, res) {
+    try {
+      const { conversationId } = req.params;
+      const { lastReadMessageId } = req.body || {};
+      const userId = req.appUser?._id || req.user?._id;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const conversation = await Conversation.findById(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ error: 'Conversation not found' });
+      }
+
+      // If no specific message provided, default to conversation.lastMessage
+      const targetMessageId = lastReadMessageId || conversation.lastMessage;
+
+      // Upsert pointer for user
+      const existingIndex = (conversation.readPointers || []).findIndex(p => String(p.user) === String(userId));
+
+      if (existingIndex >= 0) {
+        conversation.readPointers[existingIndex].lastReadMessage = targetMessageId;
+        conversation.readPointers[existingIndex].updatedAt = new Date();
+      } else {
+        conversation.readPointers = conversation.readPointers || [];
+        conversation.readPointers.push({
+          user: userId,
+          lastReadMessage: targetMessageId,
+          updatedAt: new Date()
+        });
+      }
+
+      // Bump convVersion to invalidate caches/ETag
+      conversation.convVersion = (conversation.convVersion || 0) + 1;
+      await conversation.save();
+
+      return res.status(200).json({
+        conversationId: conversation._id,
+        userId,
+        lastReadMessageId: targetMessageId
+      });
+    } catch (error) {
+      console.error('Error marking conversation as read:', error);
+      res.status(500).json({ error: error.message });
+    }
   }
 };
 

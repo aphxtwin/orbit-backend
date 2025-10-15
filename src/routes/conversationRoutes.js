@@ -8,5 +8,6 @@ router.post('/:conversationId/messages/send', authMiddleware, conversationContro
 router.get('/:conversationId/messages', conversationController.getMessages);
 router.post('/:conversationId/incoming-messages', conversationController.saveIncomingMessage);
 router.get('/messages/:messageId', conversationController.getMessageById);
+router.post('/:conversationId/read', authMiddleware, conversationController.markAsRead);
 
 module.exports = router;
